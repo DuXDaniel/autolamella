@@ -13,8 +13,7 @@ from autolamella.acquire import (
 from autolamella.autoscript import reset_state
 from autolamella.align import realign
 
-
-def upper_milling(
+def _milling_prep(
     microscope,
     settings,
     stage_settings,
@@ -55,6 +54,27 @@ def upper_milling(
         prefix="IB_" + filename_prefix,
         suffix="_1-aligned",
     )
+
+def upper_milling(
+    microscope,
+    settings,
+    stage_settings,
+    my_lamella,
+    filename_prefix="",
+    demo_mode=False,
+):
+    from autoscript_core.common import ApplicationServerException
+    from autoscript_sdb_microscope_client.structures import StagePosition
+
+    # Setup and realign to fiducial marker
+    _milling_prep(
+        microscope,
+        settings,
+        stage_settings,
+        my_lamella,
+        filename_prefix=filename_prefix,
+        demo_mode=demo_mode,
+    )
     # Create and mill patterns
     _upper_milling_coords(microscope, stage_settings, my_lamella)
     if not demo_mode:
@@ -87,35 +107,13 @@ def lower_milling(
     from autoscript_sdb_microscope_client.structures import StagePosition
 
     # Setup and realign to fiducial marker
-    setup_milling(microscope, settings, stage_settings, my_lamella)
-    tilt_in_radians = np.deg2rad(stage_settings["overtilt_degrees"])
-    microscope.specimen.stage.relative_move(StagePosition(t=+tilt_in_radians))
-    image_unaligned = grab_images(
+    _milling_prep(
         microscope,
         settings,
+        stage_settings,
         my_lamella,
-        prefix="IB_" + filename_prefix,
-        suffix="_3a-unaligned",
-    )
-    realign(microscope, image_unaligned, my_lamella.fiducial_image)
-    # Repeat realignment - in cases where the shift is large we find that
-    # the beam shift movement is less accuracte, so we make a second check
-    image_unaligned = grab_images(
-        microscope,
-        settings,
-        my_lamella,
-        prefix="IB_" + filename_prefix,
-        suffix="_3b-unaligned",
-    )
-    realign(microscope, image_unaligned, my_lamella.fiducial_image)
-    # Save the newly aligned image for the next alignment stage
-    my_lamella.fiducial_image = grab_images(microscope, settings, my_lamella)
-    grab_images(
-        microscope,
-        settings,
-        my_lamella,  # can remove
-        prefix="IB_" + filename_prefix,
-        suffix="_4-aligned",
+        filename_prefix=filename_prefix,
+        demo_mode=demo_mode,
     )
     # Create and mill patterns
     _lower_milling_coords(microscope, stage_settings, my_lamella)
@@ -288,16 +286,16 @@ def mill_all_stages(
         return
     if not os.path.isdir(output_dir):
         os.mkdir(output_dir)
-    for stage_number, stage_settings in enumerate(protocol_stages):
-        logging.info(
-            "Protocol stage {} of {}".format(
-                stage_number + 1, len(protocol_stages))
-        )
-        for lamella_number, my_lamella in enumerate(lamella_list):
+    for lamella_number, my_lamella in enumerate(lamella_list):
             logging.info(
                 "Lamella number {} of {}".format(
                     lamella_number + 1, len(lamella_list))
             )
+    	for stage_number, stage_settings in enumerate(protocol_stages):
+        	logging.info(
+            	"Protocol stage {} of {}".format(
+                	stage_number + 1, len(protocol_stages))
+        	)
             # save all the reference images you took creating the fiducial
             if stage_number == 0:
                 save_reference_images(settings, my_lamella, lamella_number)
