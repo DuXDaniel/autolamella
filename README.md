@@ -8,6 +8,8 @@ with focused ion beam milling.
 ## Citation
 If you find this useful, please cite our work.
 
+This fork has been edited by Daniel Du at Columbia University in New York City
+
 Genevieve Buckley, Gediminas Gervinskas, Cyntia Taveneau, Hariprasad Venugopal, James C. Whisstock, Alex de Marco,
 **Automated cryo-lamella preparation for high-throughput in-situ structural biology**,
 *Journal of Structural Biology*,
