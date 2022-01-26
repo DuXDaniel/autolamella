@@ -251,13 +251,13 @@ def run_drift_corrected_milling(microscope, correction_interval,
             realign(microscope, new_image, reference_image)
             microscope.patterning.resume()
 
-
 def mill_single_stage(
     microscope, settings, stage_settings, stage_number, my_lamella, lamella_number
 ):
     """Run ion beam milling for a single milling stage in the protocol."""
     filename_prefix = "lamella{}_stage{}".format(
         lamella_number + 1, stage_number + 1)
+    output_dir = settings["save_directory"]
     demo_mode = settings["demo_mode"]
     upper_milling(
         microscope,
@@ -267,6 +267,24 @@ def mill_single_stage(
         filename_prefix=filename_prefix,
         demo_mode=demo_mode,
     )
+    fullfield_cam_settings = GrabFrameSettings(
+        reduced_area=Rectangle(0, 0, 1, 1),
+        resolution=settings["fiducial"]["reduced_area_resolution"],
+        dwell_time=settings["imaging"]["dwell_time"],
+    )
+    if settings["imaging"]["autocontrast"]:
+        microscope.imaging.set_active_view(2)  # the ion beam view
+        microscope.auto_functions.run_auto_cb()
+    if settings["imaging"]["full_field_ib_images"]:
+        original_ion_current = microscope.beams.ion_beam.beam_current.value
+        microscope.beams.ion_beam.beam_current.value = 20e-12  # ion imaging
+        image = grab_ion_image(microscope, fullfield_cam_settings)
+        filename = os.path.join(
+            output_dir, "IB_lamella_upper_",str(lamella_number),"_stage_",str(stage_number),".tif".format(
+                lamella_number + 1)
+        )
+        image.save(filename)
+        microscope.beams.ion_beam.beam_current.value = original_ion_current
     lower_milling(
         microscope,
         settings,
@@ -275,7 +293,24 @@ def mill_single_stage(
         filename_prefix=filename_prefix,
         demo_mode=demo_mode,
     )
-
+        fullfield_cam_settings = GrabFrameSettings(
+        reduced_area=Rectangle(0, 0, 1, 1),
+        resolution=settings["fiducial"]["reduced_area_resolution"],
+        dwell_time=settings["imaging"]["dwell_time"],
+    )
+    if settings["imaging"]["autocontrast"]:
+        microscope.imaging.set_active_view(2)  # the ion beam view
+        microscope.auto_functions.run_auto_cb()
+    if settings["imaging"]["full_field_ib_images"]:
+        original_ion_current = microscope.beams.ion_beam.beam_current.value
+        microscope.beams.ion_beam.beam_current.value = 20e-12  # ion imaging
+        image = grab_ion_image(microscope, fullfield_cam_settings)
+        filename = os.path.join(
+            output_dir, "IB_lamella_lower_",str(lamella_number),"_stage_",str(stage_number),".tif".format(
+                lamella_number + 1)
+        )
+        image.save(filename)
+        microscope.beams.ion_beam.beam_current.value = original_ion_current
 
 def mill_all_stages(
     microscope, protocol_stages, lamella_list, settings, output_dir="output_images"
